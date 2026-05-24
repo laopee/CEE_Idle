@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CSM Civil Engineering Idle - Final</title>
+    <style>
+        :root { --req: #2196f3; --breadth: #9c27b0; --struct: #ff9800; --tech: #607d8b; }
+        body { font-family: 'Segoe UI', sans-serif; background: #eceff1; margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        
+        #sidebar { width: 340px; background: #263238; color: white; padding: 20px; display: flex; flex-direction: column; box-shadow: 2px 0 10px rgba(0,0,0,0.3); }
+        .kp-main { font-size: 2rem; color: #ffca28; margin: 5px 0; font-weight: bold; }
+        .stat-box { background: #37474f; padding: 12px; border-radius: 8px; margin-bottom: 10px; font-size: 0.85rem; border-left: 4px solid #90a4ae; }
+        
+        .progress-container { background: #101518; height: 15px; border-radius: 10px; margin-top: 8px; overflow: hidden; border: 1px solid #444; }
+        #progress-bar { background: linear-gradient(90deg, #4caf50, #8bc34a); width: 0%; height: 100%; transition: 0.4s; }
+
+        #main { flex-grow: 1; display: flex; flex-direction: column; position: relative; }
+        #tabs { display: flex; background: #cfd8dc; padding: 10px 20px 0 20px; gap: 5px; }
+        .tab { padding: 12px 18px; background: #b0bec5; border-radius: 8px 8px 0 0; cursor: pointer; border: none; font-weight: bold; font-size: 0.8rem; }
+        .tab.active { background: white; color: #1976d2; }
+        #course-grid { flex-grow: 1; padding: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; overflow-y: auto; align-content: start; }
+
+        .card { background: white; padding: 15px; border-radius: 8px; border-top: 6px solid #ccc; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; flex-direction: column; justify-content: space-between; position: relative; min-height: 150px; }
+        .card.locked { opacity: 0.3; filter: grayscale(1); pointer-events: none; }
+        .card.passed { background: #f1f8e9; border-top-color: #4caf50; }
+        .type-Required { border-top-color: var(--req); }
+        .type-Breadth { border-top-color: var(--breadth); }
+        .type-Structural { border-top-color: var(--struct); }
+        .type-Technical { border-top-color: var(--tech); }
+        
+        .card h4 { margin: 0 0 5px 0; font-size: 0.85rem; line-height: 1.2; height: 35px; }
+        .meta { font-size: 0.7rem; color: #78909c; margin-bottom: 3px; }
+        .price { font-weight: bold; color: #e65100; font-size: 0.8rem; margin-top: 5px; }
+
+        .btn-enroll { width: 100%; padding: 8px; border: none; border-radius: 4px; background: #2196f3; color: white; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        .btn-enroll:disabled { background: #b0bec5; }
+        
+        .study-btn { background: #ef5350; color: white; padding: 15px; border: none; border-radius: 8px; font-size: 1.1rem; cursor: pointer; font-weight: bold; box-shadow: 0 4px #c62828; margin-bottom: 10px; }
+        .study-btn:active { box-shadow: 0 0; transform: translateY(4px); }
+
+        #win-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; color: white; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+        .diploma { background: #fff; color: #333; padding: 40px; border-radius: 10px; border: 10px double #d4af37; max-width: 500px; box-shadow: 0 0 50px rgba(255,255,255,0.2); }
+    </style>
+</head>
+<body>
+
+<div id="win-overlay">
+    <div class="diploma">
+        <h1 style="font-family: serif; font-size: 3rem; margin: 0;">DIPLOMA</h1>
+        <p>This certifies that you have completed a</p>
+        <h2 style="color: #2c3e50;">Bachelor of Science in Civil Engineering</h2>
+        <p>at the Colorado School of Mines Idle Campus</p>
+        <hr>
+        <p>Total Time to Graduate: <br><strong id="final-time" style="font-size:2rem; color: #e67e22;">00:00</strong></p>
+        <button onclick="localStorage.clear(); location.reload();" style="padding:10px 20px; cursor:pointer; font-weight:bold;">Play Again</button>
+    </div>
+</div>
+
+<div id="sidebar">
+    <button class="study-btn" onclick="study()">STUDY (+<span id="click-power">5</span> KP)</button>
+    
+    <div class="stat-box">
+        Knowledge Points
+        <div class="kp-main" id="kp-display">0</div>
+        Auto Income: <span id="rate-display">0</span> KP/s
+    </div>
+
+    <div class="stat-box">
+        Credits: <strong id="cred-display">0</strong> / 128
+        <div class="progress-container"><div id="progress-bar"></div></div>
+    </div>
+
+    <div class="stat-box" style="font-size:0.75rem">
+        <strong>Graduation Checklist:</strong><br>
+        - 128 Total Credits: <span id="chk-cred">❌</span><br>
+        - 2 Breadth Electives: <span id="chk-breadth">❌</span><br>
+        - 1 Structural Elective: <span id="chk-struct">❌</span>
+    </div>
+
+    <div class="stat-box">
+        Time Enrolled: <span id="timer-display">0:00</span>
+    </div>
+
+    <button onclick="if(confirm('Reset degree?')){localStorage.clear(); location.reload();}" style="background:none; border:1px solid #555; color:#888; font-size:0.6rem; cursor:pointer; margin-top:auto; padding:5px;">RESET PROGRESS</button>
+</div>
+
+<div id="main">
+    <div id="tabs">
+        <button class="tab active" onclick="setTab(100)">100s</button>
+        <button class="tab" onclick="setTab(200)">200s</button>
+        <button class="tab" onclick="setTab(300)">300s</button>
+        <button class="tab" onclick="setTab(400)">400s</button>
+    </div>
+    <div id="course-grid"></div>
+</div>
+
+<script>
+    let kp = 0;
+    let currentTab = 100;
+    let passedIds = [];
+    let startTime = Date.now();
+    let gameActive = true;
+
+    const courses = [
+        // 100s
+        { id: 'MATH111', name: 'Calculus I', credits: 4, prereqs: [], cost: 200, yield: 4, type: 'Required' },
+        { id: 'CHGN121', name: 'Principles of Chemistry I', credits: 4, prereqs: [], cost: 200, yield: 4, type: 'Required' },
+        { id: 'HASS100', name: 'Nature and Human Values', credits: 3, prereqs: [], cost: 150, yield: 3, type: 'Required' },
+        { id: 'CSM101', name: 'Freshman Success Seminar', credits: 1, prereqs: [], cost: 50, yield: 2, type: 'Required' },
+        { id: 'CSCI128', name: 'Computer Science for STEM', credits: 3, prereqs: [], cost: 300, yield: 10, type: 'Required' },
+        { id: 'MATH112', name: 'Calculus II', credits: 4, prereqs: ['MATH111'], cost: 1000, yield: 20, type: 'Required' },
+        { id: 'PHGN100', name: 'Physics I – Mechanics', credits: 4, prereqs: [], cost: 1000, yield: 20, type: 'Required' },
+        { id: 'CHGN122', name: 'Principles of Chemistry II', credits: 4, prereqs: ['CHGN121'], cost: 1200, yield: 25, type: 'Required' },
+        { id: 'S&W', name: 'Success and Wellness', credits: 1, prereqs: [], cost: 100, yield: 5, type: 'Required' },
+        { id: 'EDNS151', name: 'Cornerstone – Design I', credits: 3, prereqs: [], cost: 600, yield: 15, type: 'Required' },
+
+        // 200s
+        { id: 'CEEN210', name: 'Intro to Civil Infrastructure', credits: 2, prereqs: [], cost: 3000, yield: 60, type: 'Required' },
+        { id: 'MATH213', name: 'Calculus III', credits: 4, prereqs: ['MATH112'], cost: 8000, yield: 150, type: 'Required' },
+        { id: 'PHGN200', name: 'Physics II – EM & Optics', credits: 4, prereqs: ['PHGN100'], cost: 9000, yield: 180, type: 'Required' },
+        { id: 'CEEN241', name: 'Statics', credits: 3, prereqs: ['PHGN100'], cost: 10000, yield: 200, type: 'Required' },
+        { id: 'CSM202', name: 'Student Well-Being', credits: 1, prereqs: [], cost: 5000, yield: 100, type: 'Required' },
+        { id: 'HASS215', name: 'Futures', credits: 3, prereqs: [], cost: 8000, yield: 150, type: 'Required' },
+        { id: 'MATH201', name: 'Intro to Statistics', credits: 3, prereqs: ['MATH112'], cost: 12000, yield: 250, type: 'Required' },
+        { id: 'CEEN267', name: 'Design II: Civil Engineering', credits: 3, prereqs: ['EDNS151'], cost: 15000, yield: 300, type: 'Required' },
+
+        // 300s
+        { id: 'CEEN310', name: 'Fluid Mechanics', credits: 3, prereqs: ['PHGN100', 'CEEN241'], cost: 35000, yield: 800, type: 'Required' },
+        { id: 'CEEN311', name: 'Mechanics of Materials', credits: 3, prereqs: ['CEEN241'], cost: 35000, yield: 800, type: 'Required' },
+        { id: 'CEEN315', name: 'CEE Tools', credits: 1, prereqs: ['CEEN310'], cost: 20000, yield: 400, type: 'Required' },
+        { id: 'CEEN317', name: 'Engineering Dynamics', credits: 1, prereqs: ['CEEN241'], cost: 20000, yield: 400, type: 'Required' },
+        { id: 'MATH225', name: 'Differential Equations', credits: 3, prereqs: ['MATH213'], cost: 50000, yield: 1200, type: 'Required' },
+        { id: 'CEEN312', name: 'Soil Mechanics', credits: 3, prereqs: ['CEEN311'], cost: 60000, yield: 1500, type: 'Required' },
+        { id: 'CEEN312L', name: 'Soil Mechanics Lab', credits: 1, prereqs: ['CEEN312'], cost: 20000, yield: 500, type: 'Required' },
+        { id: 'CEEN314', name: 'Structural Analysis', credits: 3, prereqs: ['CEEN311'], cost: 70000, yield: 2000, type: 'Required' },
+        { id: 'CEEN350', name: 'CE Materials', credits: 3, prereqs: ['CEEN311'], cost: 60000, yield: 1500, type: 'Required' },
+        { id: 'EBGN321', name: 'Engineering Economics', credits: 3, prereqs: [], cost: 40000, yield: 1000, type: 'Required' },
+        { id: 'CEEN331', name: 'Field Session', credits: 3, prereqs: ['CEEN267'], cost: 100000, yield: 3000, type: 'Required' },
+        
+        { id: 'CEEN301', name: 'Env. Water', credits: 3, prereqs: ['CHGN122'], cost: 50000, yield: 1200, type: 'Breadth' },
+        { id: 'CEEN381', name: 'Hydrology', credits: 3, prereqs: ['CEEN310'], cost: 50000, yield: 1200, type: 'Breadth' },
+        { id: 'CEEN320', name: 'Construction Engineering', credits: 3, prereqs: [], cost: 50000, yield: 1200, type: 'Breadth' },
+
+        // 400s
+        { id: 'CEEN415', name: 'Foundation Engineering', credits: 3, prereqs: ['CEEN312'], cost: 150000, yield: 4000, type: 'Required' },
+        { id: 'EDNS491', name: 'Capstone Design I', credits: 3, prereqs: ['CEEN314'], cost: 500000, yield: 15000, type: 'Required' },
+        { id: 'EDNS492', name: 'Capstone Design II', credits: 3, prereqs: ['EDNS491'], cost: 750000, yield: 25000, type: 'Required' },
+        { id: 'CEEN443', name: 'Steel Design', credits: 3, prereqs: ['CEEN314'], cost: 200000, yield: 5000, type: 'Structural' },
+        { id: 'CEEN445', name: 'Concrete Design', credits: 3, prereqs: ['CEEN314'], cost: 200000, yield: 5000, type: 'Structural' },
+
+        // Tech Electives (Expanded to ensure >128 Credits)
+        { id: 'CEEN302', name: 'Env: Air & Waste', credits: 3, prereqs: ['MATH213'], cost: 100000, yield: 2500, type: 'Technical' },
+        { id: 'CEEN321', name: 'Construction Methods', credits: 3, prereqs: [], cost: 100000, yield: 2500, type: 'Technical' },
+        { id: 'CEEN405', name: 'Numerical Methods', credits: 3, prereqs: ['MATH225'], cost: 200000, yield: 6000, type: 'Technical' },
+        { id: 'CEEN406', name: 'Finite Element Methods', credits: 3, prereqs: ['CEEN311'], cost: 300000, yield: 8000, type: 'Technical' },
+        { id: 'CEEN410', name: 'Advanced Soil Mechanics', credits: 3, prereqs: ['CEEN312'], cost: 250000, yield: 6500, type: 'Technical' },
+        { id: 'CEEN421', name: 'Highway/Traffic Eng', credits: 3, prereqs: [], cost: 150000, yield: 4000, type: 'Technical' },
+        { id: 'CEEN430', name: 'Advanced Structural Analysis', credits: 3, prereqs: ['CEEN314'], cost: 400000, yield: 10000, type: 'Technical' },
+        { id: 'CEEN433', name: 'Matrix Struct Analysis', credits: 3, prereqs: ['CEEN314'], cost: 400000, yield: 10000, type: 'Technical' },
+        { id: 'CEEN439', name: 'Masonry Design', credits: 3, prereqs: ['CEEN314'], cost: 200000, yield: 5000, type: 'Technical' },
+        { id: 'CEEN442', name: 'Wood Structures', credits: 3, prereqs: ['CEEN311'], cost: 200000, yield: 5000, type: 'Technical' },
+        { id: 'CEEN448', name: 'Structural Loads', credits: 3, prereqs: ['CEEN314'], cost: 300000, yield: 7000, type: 'Technical' },
+        { id: 'CEEN449', name: 'Seismic Design', credits: 3, prereqs: ['CEEN443'], cost: 600000, yield: 18000, type: 'Technical' },
+        { id: 'GEGN466', name: 'Groundwater Eng', credits: 3, prereqs: [], cost: 250000, yield: 6000, type: 'Technical' },
+        { id: 'GEGN475', name: 'GIS Applications', credits: 3, prereqs: [], cost: 200000, yield: 5000, type: 'Technical' },
+        { id: 'MEGN416', name: 'Engineering Vibration', credits: 3, prereqs: [], cost: 350000, yield: 9000, type: 'Technical' },
+        { id: 'MNGN404', name: 'Tunneling', credits: 3, prereqs: [], cost: 400000, yield: 11000, type: 'Technical' }
+    ];
+
+    function getStats() {
+        const passed = courses.filter(c => passedIds.includes(c.id));
+        const credits = passed.reduce((s, c) => s + c.credits, 0);
+        const yield = passed.reduce((s, c) => s + c.yield, 0);
+        const breadths = passed.filter(c => c.type === 'Breadth').length;
+        const structs = passed.filter(c => c.type === 'Structural').length;
+        return { credits, yield, breadths, structs };
+    }
+
+    function study() {
+        const stats = getStats();
+        kp += (5 + (stats.credits * 4));
+        updateUI();
+    }
+
+    function enroll(id) {
+        const course = courses.find(c => c.id === id);
+        if (kp >= course.cost) {
+            kp -= course.cost;
+            passedIds.push(id);
+            renderCourses();
+            updateUI();
+            checkWin();
+        }
+    }
+
+    function checkWin() {
+        const stats = getStats();
+        if (stats.credits >= 128 && stats.breadths >= 2 && stats.structs >= 1) {
+            gameActive = false;
+            document.getElementById('win-overlay').style.display = 'flex';
+            document.getElementById('final-time').innerText = getFormattedTime();
+        }
+    }
+
+    function getFormattedTime() {
+        const seconds = Math.floor((Date.now() - startTime) / 1000);
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${m}:${s < 10 ? '0' + s : s}`;
+    }
+
+    function updateUI() {
+        const stats = getStats();
+        document.getElementById('kp-display').innerText = Math.floor(kp).toLocaleString();
+        document.getElementById('rate-display').innerText = stats.yield.toLocaleString();
+        document.getElementById('click-power').innerText = (5 + (stats.credits * 4));
+        document.getElementById('cred-display').innerText = stats.credits;
+        document.getElementById('timer-display').innerText = getFormattedTime();
+        
+        document.getElementById('progress-bar').style.width = Math.min(100, (stats.credits / 128 * 100)) + "%";
+
+        document.getElementById('chk-cred').innerText = stats.credits >= 128 ? '✅' : '❌';
+        document.getElementById('chk-breadth').innerText = stats.breadths >= 2 ? '✅' : '❌';
+        document.getElementById('chk-struct').innerText = stats.structs >= 1 ? '✅' : '❌';
+    }
+
+    function renderCourses() {
+        const grid = document.getElementById('course-grid');
+        grid.innerHTML = '';
+        const stats = getStats();
+
+        // Fixed filtering logic to handle IDs like "S&W"
+        const filtered = courses.filter(c => {
+            const numMatch = c.id.match(/\d+/);
+            const num = numMatch ? parseInt(numMatch[0]) : 100;
+            return num >= currentTab && num < currentTab + 100;
+        });
+
+        filtered.forEach(c => {
+            const isPassed = passedIds.includes(c.id);
+            let canUnlock = c.prereqs.every(p => passedIds.includes(p));
+            
+            // Special Rule: Senior Standing for Capstone
+            if (c.id === 'EDNS491' && stats.credits < 90) canUnlock = false;
+
+            const card = document.createElement('div');
+            card.className = `card type-${c.type} ${isPassed ? 'passed' : (canUnlock ? 'available' : 'locked')}`;
+            card.innerHTML = `
+                <div>
+                    <div style="font-size:0.6rem; font-weight:bold; color:#777;">${c.type.toUpperCase()}</div>
+                    <h4>${c.id}: ${c.name}</h4>
+                    <div class="meta">Credits: ${c.credits}</div>
+                    <div class="meta">Reqs: ${c.prereqs.length ? c.prereqs.join(', ') : (c.id === 'EDNS491' ? '90 Credits' : 'None')}</div>
+                </div>
+                <div>
+                    ${isPassed ? '<div style="text-align:center; font-weight:bold; color:#4caf50">PASSED ✓</div>' : 
+                    `<div class="price">Cost: ${c.cost.toLocaleString()} KP</div>
+                     <button class="btn-enroll" onclick="enroll('${c.id}')" ${kp < c.cost ? 'disabled' : ''}>Enroll</button>`}
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    function setTab(lvl) {
+        currentTab = lvl;
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+        renderCourses();
+    }
+
+    setInterval(() => {
+        if (!gameActive) return;
+        const stats = getStats();
+        kp += (stats.yield / 10);
+        updateUI();
+        // Dynamic button state update
+        document.querySelectorAll('.btn-enroll').forEach(btn => {
+            const id = btn.getAttribute('onclick').match(/'([^']+)'/)[1];
+            btn.disabled = kp < courses.find(c => c.id === id).cost;
+        });
+    }, 100);
+
+    renderCourses();
+</script>
+</body>
+</html>
